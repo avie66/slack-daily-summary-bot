@@ -173,6 +173,12 @@ The bot is fully implemented with the following structure:
 - `reactions:read` - Count reactions on messages
 - `users:read` - Get user display names
 
+**Bot Initialization**:
+- Tool handlers are always registered, even if Slack is not configured
+- When SLACK_BOT_TOKEN is missing or invalid, bot logs a warning but continues running
+- Tool calls without valid Slack credentials return helpful error messages
+- After adding/updating SLACK_BOT_TOKEN in bot setup, restart the bot to initialize Slack
+
 **IST Timezone Handling**:
 - Schedule uses workspace timezone (IST)
 - Summary analysis uses IST for day boundaries (midnight to midnight)
@@ -189,6 +195,8 @@ The bot is fully implemented with the following structure:
 - Gracefully handles missing channels, API errors
 - Logs warnings for channels that can't be accessed
 - Returns error messages for tool calls that fail
+- Bot starts and registers tool handlers even without Slack token configured
+- Returns helpful configuration messages when tools are called without valid Slack credentials
 
 ---
 

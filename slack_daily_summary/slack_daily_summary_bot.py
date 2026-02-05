@@ -51,20 +51,21 @@ async def slack_daily_summary_main_loop(fclient: ckit_client.FlexusClient, rcx: 
     SLACK_APP_TOKEN = setup.get("SLACK_APP_TOKEN", "")
     target_channel = setup.get("target_channel", "bob-testing")
 
-    if not SLACK_BOT_TOKEN:
-        logger.error("SLACK_BOT_TOKEN not configured, bot cannot function")
-        return
-
-    slack_client = AsyncWebClient(token=SLACK_BOT_TOKEN)
+    slack_client = None
     bot_user_id = None
 
-    try:
-        auth_response = await slack_client.auth_test()
-        bot_user_id = auth_response["user_id"]
-        logger.info(f"Bot authenticated as user_id: {bot_user_id}")
-    except SlackApiError as e:
-        logger.error(f"Failed to authenticate with Slack: {e}")
-        return
+    if SLACK_BOT_TOKEN:
+        try:
+            slack_client = AsyncWebClient(token=SLACK_BOT_TOKEN)
+            auth_response = await slack_client.auth_test()
+            bot_user_id = auth_response["user_id"]
+            logger.info(f"Bot authenticated as user_id: {bot_user_id}")
+        except SlackApiError as e:
+            logger.error(f"Failed to authenticate with Slack: {e}")
+            slack_client = None
+            bot_user_id = None
+    else:
+        logger.warning("SLACK_BOT_TOKEN not configured, bot will run but cannot generate summaries until configured")
 
     @rcx.on_updated_message
     async def updated_message_in_db(msg: ckit_ask_model.FThreadMessageOutput):
@@ -76,6 +77,9 @@ async def slack_daily_summary_main_loop(fclient: ckit_client.FlexusClient, rcx: 
 
     @rcx.on_tool_call(GENERATE_SUMMARY_TOOL.name)
     async def toolcall_generate_summary(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
+        if not slack_client or not bot_user_id:
+            return "Configuration required: Please set SLACK_BOT_TOKEN in bot setup to enable summary generation. Go to bot settings to configure the token with required scopes: channels:read, channels:history, chat:write, reactions:read, users:read"
+
         logger.info("Generating daily summary")
 
         try:
@@ -90,6 +94,8 @@ async def slack_daily_summary_main_loop(fclient: ckit_client.FlexusClient, rcx: 
 
     @rcx.on_tool_call(fi_slack.SLACK_TOOL.name)
     async def toolcall_slack(toolcall: ckit_cloudtool.FCloudtoolCall, model_produced_args: Dict[str, Any]) -> str:
+        if not slack_client:
+            return "Configuration required: Please set SLACK_BOT_TOKEN in bot setup to enable Slack integration"
         return "Slack tool is available but this bot primarily operates on a schedule. Use generate_daily_summary to test the summary generation."
 
     try:
