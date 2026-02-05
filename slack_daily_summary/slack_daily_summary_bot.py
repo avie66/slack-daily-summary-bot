@@ -21,7 +21,7 @@ from slack_daily_summary import slack_daily_summary_install
 logger = logging.getLogger("slack_daily_summary")
 
 BOT_NAME = "slack_daily_summary"
-BOT_VERSION = "0.1.1"
+BOT_VERSION = "0.1.2"
 
 GENERATE_SUMMARY_TOOL = ckit_cloudtool.CloudTool(
     strict=True,
